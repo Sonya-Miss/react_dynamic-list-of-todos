@@ -1,71 +1,85 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Todo } from '../../types/Todo';
+import { TodoModal } from '../TodoModal';
 
 interface TodoListProps {
   todos: Todo[];
-  onTodoClick: (todo: Todo) => void;
-  selectedTodoId: number | null; // Додамо пропс для вибраного todo
+  onShowTodo: (todo: Todo) => void;
 }
 
-export const TodoList: React.FC<TodoListProps> = ({
-  todos,
-  onTodoClick,
-  selectedTodoId,
-}) => (
-  <table className="table is-narrow is-fullwidth">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>
-          <span className="icon">
-            <i className="fas fa-check" />
-          </span>
-        </th>
-        <th>Title</th>
-        <th> </th>
-      </tr>
-    </thead>
+export const TodoList: React.FC<TodoListProps> = ({ todos }) => {
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
 
-    <tbody>
-      {todos.map(todo => (
-        <tr key={todo.id} data-cy="todo" onClick={() => onTodoClick(todo)}>
-          <td>{todo.id}</td>
-          <td>{todo.completed && <span data-cy="iconCompleted">✔</span>}</td>
+  const handleSelectTodo = (todo: Todo) => {
+    setSelectedTodo(todo);
+  };
 
-          <td>{todo.title}</td>
-          <td className="has-text-right">
-            {selectedTodoId !== todo.id ? (
-              <button
-                data-cy="selectButton"
-                className="button is-info"
-                type="button"
-                onClick={event => {
-                  event.stopPropagation();
-                  onTodoClick(todo); // Вибір завдання
-                }}
-              >
-                <span className="icon">
-                  <i className="far fa-eye" /> {/* Обычная кнопка */}
-                </span>
-              </button>
-            ) : (
-              <button
-                data-cy="selectButton"
-                className="button is-info"
-                type="button"
-                onClick={event => {
-                  event.stopPropagation();
-                  onTodoClick(todo); // Повторный выбор задачи для скрытия
-                }}
-              >
-                <span className="icon">
-                  <i className="fas fa-eye-slash" />{' '}
-                </span>
-              </button>
-            )}
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-);
+  const handleCloseModal = () => {
+    setSelectedTodo(null);
+  };
+
+  return (
+    <div>
+      <table className="table is-narrow is-fullwidth">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>
+              <span className="icon">
+                <i className="fas fa-check" />
+              </span>
+            </th>
+            <th>Title</th>
+            <th> </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {todos.map(todo => (
+            <tr key={todo.id} data-cy="todo">
+              <td className="is-vcentered">{todo.id}</td>
+              <td className="is-vcentered">
+                {todo.completed && (
+                  <span className="icon" data-cy="iconCompleted">
+                    <i className="fas fa-check" />
+                  </span>
+                )}
+              </td>
+              <td className="is-vcentered is-expanded">
+                <p
+                  className={
+                    todo.completed ? 'has-text-success' : 'has-text-danger'
+                  }
+                >
+                  {todo.title}
+                </p>
+              </td>
+              <td className="has-text-right is-vcentered">
+                <button
+                  data-cy="selectButton"
+                  className="button"
+                  type="button"
+                  onClick={() => handleSelectTodo(todo)}
+                >
+                  <span className="icon">
+                    <i
+                      className={
+                        selectedTodo?.id === todo.id
+                          ? 'far fa-eye-slash'
+                          : 'far fa-eye'
+                      }
+                    />
+                  </span>
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {selectedTodo && (
+        <TodoModal todo={selectedTodo} onClose={handleCloseModal} />
+      )}
+    </div>
+  );
+};

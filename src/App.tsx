@@ -6,46 +6,60 @@ import { TodoList } from './components/TodoList';
 import { TodoFilter } from './components/TodoFilter';
 import { TodoModal } from './components/TodoModal';
 import { Loader } from './components/Loader';
-import { getUsers, getTodos } from './api';
-import { User } from './types/User';
+import { getTodos } from './api';
 import { Todo } from './types/Todo';
 
 export const App: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('all');
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
 
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchText, setSearchText] = useState<string>('');
+
   useEffect(() => {
-    setIsLoading(true);
-    Promise.all([getUsers(), getTodos()])
-      .then(([usersData, todosData]) => {
-        setUsers(usersData);
-        setTodos(todosData);
+    setLoading(true);
+    setError(null);
+    getTodos()
+      .then(data => {
+        setTodos(data);
+        setFilteredTodos(data);
       })
-      // eslint-disable-next-line no-console
-      .catch(error => console.error('Error loading data:', error))
-      .finally(() => setIsLoading(false));
+      .catch(() => setError('Error fetching todos'))
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredTodos: Todo[] = todos.filter(todo => {
-    const matchesQuery = todo.title.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus =
-      status === 'all' ||
-      (status === 'completed' && todo.completed) ||
-      (status === 'active' && !todo.completed);
+  useEffect(() => {
+    let updatedTodos = [...todos];
 
-    return matchesQuery && matchesStatus;
-  });
+    if (filterStatus === 'completed') {
+      updatedTodos = updatedTodos.filter(todo => todo.completed);
+    } else if (filterStatus === 'active') {
+      updatedTodos = updatedTodos.filter(todo => !todo.completed);
+    }
 
-  const handleTodoClick = (todo: Todo) => {
+    if (searchText.trim()) {
+      updatedTodos = updatedTodos.filter(todo =>
+        todo.title.toLowerCase().includes(searchText.toLowerCase()),
+      );
+    }
+
+    setFilteredTodos(updatedTodos);
+  }, [filterStatus, searchText, todos]);
+
+  const handleShowTodo = (todo: Todo) => {
     setSelectedTodo(todo);
   };
 
   const handleCloseModal = () => {
     setSelectedTodo(null);
+  };
+
+  const handleFilterChange = (status: string, text: string) => {
+    setFilterStatus(status);
+    setSearchText(text);
   };
 
   return (
@@ -56,23 +70,14 @@ export const App: React.FC = () => {
             <h1 className="title">Todos:</h1>
 
             <div className="block">
-              <TodoFilter
-                query={query}
-                setQuery={setQuery}
-                setStatus={setStatus}
-                status={status}
-              />
+              <TodoFilter onFilterChange={handleFilterChange} />
             </div>
 
             <div className="block">
-              {isLoading ? (
-                <Loader />
-              ) : (
-                <TodoList
-                  todos={filteredTodos}
-                  onTodoClick={handleTodoClick}
-                  selectedTodoId={selectedTodo ? selectedTodo.id : null}
-                />
+              {loading && <Loader data-cy="loader" />}
+              {error && <p className="has-text-danger">{error}</p>}
+              {!loading && !error && (
+                <TodoList todos={filteredTodos} onShowTodo={handleShowTodo} />
               )}
             </div>
           </div>
@@ -80,12 +85,7 @@ export const App: React.FC = () => {
       </div>
 
       {selectedTodo && (
-        <TodoModal
-          // data-cy="todo"
-          todo={selectedTodo}
-          user={users.find(u => u.id === selectedTodo.userId) || null} // Передаємо user
-          onClose={handleCloseModal}
-        />
+        <TodoModal todo={selectedTodo} onClose={handleCloseModal} />
       )}
     </>
   );

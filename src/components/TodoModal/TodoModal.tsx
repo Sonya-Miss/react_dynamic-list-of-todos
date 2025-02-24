@@ -1,58 +1,90 @@
-import React, { useEffect, useState } from 'react';
-import { User } from '../../types/User';
+import React, { useState, useEffect } from 'react';
 import { Todo } from '../../types/Todo';
-import { getUser } from '../../api';
+import { User } from '../../types/User';
 import { Loader } from '../Loader';
 
-interface Props {
-  todo: Todo;
-  user: User | null;
+interface TodoModalProps {
+  todo: Todo | null;
   onClose: () => void;
 }
 
-export const TodoModal: React.FC<Props> = ({ todo, onClose }) => {
+export const TodoModal: React.FC<TodoModalProps> = ({ todo, onClose }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
+    if (todo) {
+      setLoading(true);
+      setError(null);
 
-    getUser(todo.userId)
-      .then(fetchedUser => setUser(fetchedUser))
-      .catch(error => {
-        // eslint-disable-next-line no-console
-        console.error('Error fetching user:', error);
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
-  }, [todo.userId]);
+      setTimeout(() => {
+        fetch(
+          `https://mate-academy.github.io/react_dynamic-list-of-todos/api/users/${todo.userId}.json`,
+        )
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to fetch user');
+            }
+
+            return response.json();
+          })
+          .then(setUser)
+          .catch(() => setError('Failed to load user'))
+          .finally(() => setLoading(false));
+      }, 300);
+    }
+  }, [todo]);
+
+  if (!todo) {
+    return null;
+  }
 
   return (
     <div className="modal is-active" data-cy="modal">
       <div className="modal-background" onClick={onClose} />
-      <div className="modal-content box" data-cy="todo">
-        <button
-          className="delete"
-          aria-label="close"
-          onClick={onClose}
-          data-cy="modal-close"
-        />
-
-        {loading && <Loader data-cy="loader" />}
-
-        {!loading && (
-          <div>
-            <h2 className="title" data-cy="modal-title">
-              Todo #{todo.id}
-            </h2>
-            <p data-cy="modal-status">
-              <strong>Status:</strong> {todo.completed ? 'Completed' : 'Active'}
-            </p>
-            <p data-cy="modal-user">
-              <strong>User:</strong> {user ? user.name : 'Unknown'}
-            </p>
+      <div className="modal-card">
+        <header className="modal-card-head">
+          <div
+            className="modal-card-title has-text-weight-medium"
+            data-cy="modal-header"
+          >
+            Todo #{todo.id}
           </div>
-        )}
+
+          <button
+            type="button"
+            className="delete"
+            data-cy="modal-close"
+            onClick={onClose}
+          />
+        </header>
+
+        <div className="modal-card-body">
+          <p className="block" data-cy="modal-title">
+            {todo.title}
+          </p>
+
+          {loading ? (
+            <Loader />
+          ) : error ? (
+            <p className="has-text-danger">{error}</p>
+          ) : (
+            <p className="block" data-cy="modal-user">
+              {todo.completed ? (
+                <strong className="has-text-success">Done</strong>
+              ) : (
+                <strong className="has-text-danger">Planned</strong>
+              )}
+              {' by '}
+              {user ? (
+                <a href={`mailto:${user.email}`}>{user.name}</a>
+              ) : (
+                'Unknown User'
+              )}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

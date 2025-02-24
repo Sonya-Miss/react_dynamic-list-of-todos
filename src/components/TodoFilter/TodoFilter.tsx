@@ -1,18 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface TodoFilterProps {
-  query: string;
-  setQuery: React.Dispatch<React.SetStateAction<string>>;
-  status: string;
-  setStatus: React.Dispatch<React.SetStateAction<string>>;
+  onFilterChange: (status: string, searchText: string) => void;
 }
 
-export const TodoFilter: React.FC<TodoFilterProps> = ({
-  query,
-  setQuery,
-  status,
-  setStatus,
-}) => {
+export const TodoFilter: React.FC<TodoFilterProps> = ({ onFilterChange }) => {
+  const [status, setStatus] = useState<string>('all');
+  const [searchText, setSearchText] = useState<string>('');
+
+  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = event.target.value;
+
+    setStatus(newStatus);
+    onFilterChange(newStatus, searchText);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchText = event.target.value;
+
+    setSearchText(newSearchText);
+    onFilterChange(status, newSearchText);
+  };
+
   return (
     <form className="field has-addons">
       <p className="control">
@@ -20,7 +29,7 @@ export const TodoFilter: React.FC<TodoFilterProps> = ({
           <select
             data-cy="statusSelect"
             value={status}
-            onChange={e => setStatus(e.target.value)}
+            onChange={handleStatusChange}
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -35,20 +44,26 @@ export const TodoFilter: React.FC<TodoFilterProps> = ({
           type="text"
           className="input"
           placeholder="Search..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
+          value={searchText}
+          onChange={handleSearchChange}
         />
         <span className="icon is-left">
-          <i className="fas fa-search" />
+          <i className="fas fa-magnifying-glass" />
         </span>
-
-        {query && (
-          <span className="icon is-right">
+        {searchText && (
+          <span
+            className="icon is-right"
+            style={{ pointerEvents: 'all' }}
+            onClick={() => setSearchText('')}
+          >
             <button
               data-cy="clearSearchButton"
               type="button"
               className="delete"
-              onClick={() => setQuery('')}
+              onClick={() => {
+                setSearchText('');
+                onFilterChange(status, '');
+              }}
             />
           </span>
         )}
